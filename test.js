@@ -1,22 +1,19 @@
 console.log("UTM script loaded from external source");
 
-// Get UTM params from URL
+// Get ALL query parameters from current URL
 const params = new URLSearchParams(window.location.search);
-const utm_source = params.get("utm_source");
-const utm_campaign = params.get("utm_campaign");
 
-console.log("UTM values:", utm_source, utm_campaign);
-
-// Check if both UTM params exist
-if (utm_source && utm_campaign) {
-  // Rebuild the full UTM query string
-  const utmParams = `utm_source=${encodeURIComponent(utm_source)}&utm_campaign=${encodeURIComponent(utm_campaign)}`;
+// Only run if there’s at least one param
+if (params.toString()) {
+  const queryString = params.toString();
 
   // Find all links pointing to app.caimera.ai
   document.querySelectorAll('a[href*="app.caimera.ai"]').forEach(link => {
-    const baseUrl = link.href.split('?')[0];  // remove existing query params
-    link.href = `${baseUrl}?${utmParams}`;    // attach UTM params
+    const baseUrl = link.href.split('?')[0];  // Remove existing query params
+    link.href = `${baseUrl}?${queryString}`;  // Attach full query string
   });
 
-  console.log("✅ UTM params attached to app.caimera.ai links:", utmParams);
+  console.log("✅ All query params attached to app.caimera.ai links:", queryString);
+} else {
+  console.log("⚠️ No query params found in URL.");
 }
