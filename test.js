@@ -28,44 +28,28 @@ function attachLinks(distinctId) {
 }
 
 function manageTrackingSession(params) {
-  const stored = JSON.parse(localStorage.getItem('ph_tracking_info'));
-
-  const hasChanged = !stored || (
-    params.utm_source && (
-      params.utm_source !== stored.utm_source && !params.utm_source.includes('google')
-    )
-  );
+  setTimeout(() => {
+    if (params.utm_source && params.utm_source !== 'direct') {
+      const distinctId = posthog.get_distinct_id();
   
-
-  if (hasChanged) {
-    const distinctId = posthog.get_distinct_id();
-
-    posthog.identify(distinctId, {
-      utm_source: params.utm_source,
-      utm_medium: params.utm_medium,
-      utm_campaign: params.utm_campaign,
-      utm_term: params.utm_term,
-      utm_content: params.utm_content
-    });
-
-    localStorage.setItem('ph_tracking_info', JSON.stringify({
-      ...params,
-      distinct_id: distinctId
-    }));
-
-
-    attachLinks(distinctId);
-    posthog.reset();
-    console.log("🚫 PostHog session reset.");
-  }
+      posthog.identify(distinctId, {
+        utm_source: params.utm_source,
+        utm_medium: params.utm_medium,
+        utm_campaign: params.utm_campaign,
+        utm_term: params.utm_term,
+        utm_content: params.utm_content
+      });
+  
+      attachLinks(distinctId);
+      posthog.reset();
+      console.log("🚫 PostHog session reset.");
+    }
+  }, 2000)
 }
 
 
-
-// Run it after PostHog loads
-setTimeout(() => {
   // Initialize PostHog with your project API key and api_host
   posthog.init('phc_MDq2diuYFU92FIc3VdtiXaZNQjSma7yBahcGQPBEgW5', {api_host: 'https://us.i.posthog.com'});
   const params = getTrackingParams();
   manageTrackingSession(params);
-}, 2000);
+
