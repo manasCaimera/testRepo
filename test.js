@@ -1,104 +1,71 @@
-console.log("new script loaded")
-
-setTimeout(() => {
-  console.log("UTM script loaded from external source");
-
-  // Get ALL query parameters from current URL
+function getTrackingParams() {
   const params = new URLSearchParams(window.location.search);
-  
-  // Check if UTM parameters exist
-  const utmParams = {};
-  ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].forEach(key => {
-    if (params.get(key)) {
-      utmParams[key] = params.get(key);
-    }
-  });
-  
-  // If UTM parameters are found
-  if (Object.keys(utmParams).length > 0) {
-    console.log("✅ UTM params found:", utmParams);
-  
-    // Send UTM parameters to PostHog as person properties
-    if (typeof posthog !== 'undefined') {
-      posthog.identify(posthog.get_distinct_id(), utmParams);
-  
-      // Get the distinct id
-      const distinctId = posthog.get_distinct_id();
-  
-      // Build new query string: UTM params + distinct id
-      const newParams = new URLSearchParams({...Object.fromEntries(params.entries()), ph_distinct_id: distinctId}).toString();
-  
-      // Update all links pointing to app.caimera.ai
-      document.querySelectorAll('a[href*="app.caimera.ai"]').forEach(link => {
-        const baseUrl = link.href.split('?')[0];
-        link.href = `${baseUrl}?${newParams}`;
-      });
-  
-      // Attach click handlers to buttons with data-url containing app.caimera.ai
-      document.querySelectorAll('button[data-url*="app.caimera.ai"]').forEach(button => {
-        button.addEventListener('click', (e) => {
-          e.preventDefault();
-          const baseUrl = button.getAttribute('data-url').split('?')[0];
-          window.open(`${baseUrl}?${newParams}`, '_blank');
-        });
-      });
-  
-      console.log("✅ All query params + distinct_id attached to app.caimera.ai links & buttons:", newParams);
-    } else {
-      console.warn("⚠️ PostHog not initialized.");
-    }
-  } else {
-    console.log("⚠️ No UTM params found in URL.");
+  let source = params.get('utm_source');
+  const medium = params.get('utm_medium');
+  const campaign = params.get('utm_campaign');
+  const term = params.get('utm_term');
+  const content = params.get('utm_content');
+
+  if (!source && document.referrer) {
+    source = document.referrer
   }
+
+  return {
+    utm_source: source || 'direct',
+    utm_medium: medium || null,
+    utm_campaign: campaign || null,
+    utm_term: term || null,
+    utm_content: content || null
+  };
+}
+
+function attachLinks(distinctId) {
+  document.querySelectorAll('a[href*="app.caimera.ai"]').forEach(link => {
+    const baseUrl = link.href.split('?')[0];
+    link.href = `${baseUrl}?ph_distinct_id=${distinctId}`;
+  });
+  console.log("✅ ph_distinct_id attached to app.caimera.ai links & buttons.");
+}
+
+function manageTrackingSession(params) {
+  const stored = JSON.parse(localStorage.getItem('ph_tracking_info'));
+
+  const hasChanged = !stored || (
+    params.utm_source && (
+      params.utm_source !== stored.utm_source && !params.utm_source.includes('google')
+    )
+  );
   
-},2000)
+
+  if (hasChanged) {
+    const distinctId = posthog.get_distinct_id();
+
+    posthog.identify(distinctId, {
+      utm_source: params.utm_source,
+      utm_medium: params.utm_medium,
+      utm_campaign: params.utm_campaign,
+      utm_term: params.utm_term,
+      utm_content: params.utm_content
+    });
+
+    localStorage.setItem('ph_tracking_info', JSON.stringify({
+      ...params,
+      distinct_id: distinctId
+    }));
 
 
-// console.log("UTM script loaded from external source");
-
-// // Get ALL query parameters from current URL
-// const params = new URLSearchParams(window.location.search);
-
-// // Only run if there’s at least one param
-// if (params.toString()) {
-//   const queryString = params.toString();
-
-//   // Find all links pointing to app.caimera.ai
-//   document.querySelectorAll('a[href*="app.caimera.ai"]').forEach(link => {
-//     const baseUrl = link.href.split('?')[0];  // Remove existing query params
-//     link.href = `${baseUrl}?${queryString}`;  // Attach full query string
-//   });
-
-//   console.log("✅ All query params attached to app.caimera.ai links:", queryString);
-// } else {
-//   console.log("⚠️ No query params found in URL.");
-// }
+    attachLinks(distinctId);
+    posthog.reset();
+    console.log("🚫 PostHog session reset.");
+  }
+}
 
 
-// console.log("UTM script loaded from external source");
 
-// // Get ALL query parameters from current URL
-// const params = new URLSearchParams(window.location.search);
-
-// if (params.toString()) {
-//   const queryString = params.toString();
-
-//   // Update all links pointing to app.caimera.ai
-//   document.querySelectorAll('a[href*="app.caimera.ai"]').forEach(link => {
-//     const baseUrl = link.href.split('?')[0];
-//     link.href = `${baseUrl}?${queryString}`;
-//   });
-
-//   // Attach click handlers to buttons with data-url containing app.caimera.ai
-//   document.querySelectorAll('button[data-url*="app.caimera.ai"]').forEach(button => {
-//     button.addEventListener('click', (e) => {
-//       e.preventDefault();
-//       const baseUrl = button.getAttribute('data-url').split('?')[0];
-//       window.open(`${baseUrl}?${queryString}`, '_blank');
-//     });
-//   });
-
-//   console.log("✅ All query params attached to app.caimera.ai links & buttons:", queryString);
-// } else {
-//   console.log("⚠️ No query params found in URL.");
-// }
+// Run it after PostHog loads
+setTimeout(() => {
+  // Initialize PostHog with your project API key and api_host
+  posthog.init('phc_MDq2diuYFU92FIc3VdtiXaZNQjSma7yBahcGQPBEgW5', {api_host: 'https://us.i.posthog.com'});
+  const params = getTrackingParams();
+  manageTrackingSession(params);
+}, 2000);
