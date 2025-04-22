@@ -32,13 +32,13 @@ function manageTrackingSession(params) {
     if (params.utm_source && params.utm_source !== 'direct') {
       const distinctId = posthog.get_distinct_id();
   
-      posthog.identify(distinctId, {
-        utm_source: params.utm_source,
-        utm_medium: params.utm_medium,
-        utm_campaign: params.utm_campaign,
-        utm_term: params.utm_term,
-        utm_content: params.utm_content
-      });
+      // posthog.identify(distinctId, {
+      //   utm_source: params.utm_source,
+      //   utm_medium: params.utm_medium,
+      //   utm_campaign: params.utm_campaign,
+      //   utm_term: params.utm_term,
+      //   utm_content: params.utm_content
+      // });
   
       attachLinks(distinctId);
       posthog.reset();
