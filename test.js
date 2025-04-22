@@ -42,6 +42,7 @@ function manageTrackingSession(params) {
   
       attachLinks(distinctId);
       posthog.reset();
+      posthog.opt_out_capturing();
       console.log("🚫 PostHog session reset.");
     }
   }, 2000)
